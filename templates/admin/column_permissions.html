@@ -1,0 +1,238 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-layout-three-columns"></i> Column Permissions</h2>
+    <div class="d-flex gap-2">
+        <input type="text" class="form-control" placeholder="Search fields..." id="searchFields" style="max-width:300px;">
+    </div>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- PERMISSION GRID -->
+<div class="card-box permission-grid">
+    <form method="POST" id="permissionForm" action="/admin/column-permissions">
+        
+        <div class="row mb-3">
+            <div class="col-md-5">
+                <label class="fw-bold">Select User:</label>
+                <select name="user_id" class="form-select" id="userSelect">
+                    <option value="">-- Select User --</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}" 
+                            {% if selected_user_id and selected_user_id|string == user.id|string %}selected{% endif %}>
+                            {{ user.full_name or user.username }} ({{ user.email }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="fw-bold">Total Fields:</label>
+                <span class="badge bg-primary fs-5">{{ fields|length }}</span>
+            </div>
+            <div class="col-md-4 text-end">
+                <button type="submit" class="btn-give-permission" id="givePermissionBtn">
+                    <i class="bi bi-check-circle"></i> Give Permission
+                </button>
+            </div>
+        </div>
+
+        <!-- User Info -->
+        <div class="row mb-3">
+            <div class="col-md-12">
+                {% if selected_user_id %}
+                    <div class="selected-user-info">
+                        <i class="bi bi-person-check"></i> 
+                        <strong>Managing permissions for:</strong> 
+                        {% for user in users %}
+                            {% if user.id == selected_user_id %}
+                                {{ user.full_name or user.username }} ({{ user.email }})
+                            {% endif %}
+                        {% endfor %}
+                        <span class="badge bg-success ms-2">✓ Checkboxes Enabled</span>
+                    </div>
+                {% else %}
+                    <div class="no-user-msg">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        <strong>Please select a user</strong> from the dropdown above to manage their column permissions.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-container">
+            <table class="table table-bordered table-striped" id="permissionTable">
+                <thead class="sticky-header">
+                    <tr>
+                        <th style="min-width: 200px;">Field Name</th>
+                        <th style="min-width: 150px;">Display Name</th>
+                        <th style="min-width: 90px;">Type</th>
+                        <th style="min-width: 140px;" class="text-center">View</th>
+                        <th style="min-width: 140px;" class="text-center">Edit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in fields %}
+                        <tr class="field-row">
+                            <td><strong>{{ field.field_name }}</strong></td>
+                            <td>{{ field.display_name }}</td>
+                            <td><span class="badge bg-info badge-type">{{ field.field_type }}</span></td>
+                            
+                            <!-- VIEW CHECKBOX -->
+                            <td class="text-center">
+                                <div class="checkbox-container">
+                                    <input type="checkbox" 
+                                           name="view_{{ field.id }}" 
+                                           id="view_{{ field.id }}"
+                                           class="custom-checkbox"
+                                           {% if selected_user_id %}
+                                               {% set user_perm = user_permissions.get(selected_user_id, {}).get(field.id, {'can_view': false, 'can_edit': false}) %}
+                                               {% if user_perm.can_view %}checked{% endif %}
+                                           {% endif %}>
+                                    <span class="checkbox-label">View</span>
+                                </div>
+                            </td>
+                            
+                            <!-- EDIT CHECKBOX - ALWAYS ENABLED -->
+                            <td class="text-center">
+                                <div class="checkbox-container">
+                                    <input type="checkbox" 
+                                           name="edit_{{ field.id }}" 
+                                           id="edit_{{ field.id }}"
+                                           class="custom-checkbox edit"
+                                           {% if selected_user_id %}
+                                               {% set user_perm = user_permissions.get(selected_user_id, {}).get(field.id, {'can_view': false, 'can_edit': false}) %}
+                                               {% if user_perm.can_edit %}checked{% endif %}
+                                           {% else %}
+                                               disabled
+                                           {% endif %}>
+                                    <span class="checkbox-label">Edit</span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Summary Stats -->
+        {% if selected_user_id %}
+            {% set total_fields = fields|length %}
+            {% set viewed_fields = 0 %}
+            {% set edited_fields = 0 %}
+            {% for field in fields %}
+                {% set user_perm = user_permissions.get(selected_user_id, {}).get(field.id, {'can_view': false, 'can_edit': false}) %}
+                {% if user_perm.can_view %}{% set viewed_fields = viewed_fields + 1 %}{% endif %}
+                {% if user_perm.can_edit %}{% set edited_fields = edited_fields + 1 %}{% endif %}
+            {% endfor %}
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Permission Summary</h6>
+                            <div class="progress mb-2" style="height: 25px;">
+                                <div class="progress-bar bg-success" style="width: {{ (viewed_fields/total_fields*100)|round }}%; height: 25px; line-height: 25px;">
+                                    View: {{ viewed_fields }}/{{ total_fields }}
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-warning" style="width: {{ (edited_fields/total_fields*100)|round }}%; height: 25px; line-height: 25px;">
+                                    Edit: {{ edited_fields }}/{{ total_fields }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </form>
+</div>
+
+<style>
+    .permission-grid { overflow-x: auto; }
+    .permission-grid table { font-size: 13px; }
+    .permission-grid th { white-space: nowrap; position: sticky; top: 0; background: #2c3e50; color: white; z-index: 10; }
+    .permission-grid td { vertical-align: middle; padding: 8px 10px; }
+    .table-container { max-height: 550px; overflow-y: auto; }
+    .btn-give-permission { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 40px;
+        font-size: 18px;
+        font-weight: bold;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .btn-give-permission:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+    .selected-user-info { background: #e8f5e9; padding: 10px 15px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #28a745; }
+    .no-user-msg { background: #fff3cd; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107; }
+    .badge-type { font-size: 11px; padding: 4px 8px; }
+    
+    /* BIG VISIBLE CHECKBOXES */
+    .custom-checkbox {
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+        margin: 0 auto;
+        display: inline-block;
+        border: 2px solid #555 !important;
+        border-radius: 4px !important;
+        background-color: #f8f8f8 !important;
+        -webkit-appearance: none;
+        appearance: none;
+        position: relative;
+    }
+    .custom-checkbox:checked {
+        background-color: #1a7a3a !important;
+        border-color: #1a7a3a !important;
+    }
+    .custom-checkbox.edit:checked {
+        background-color: #cc7a00 !important;
+        border-color: #cc7a00 !important;
+    }
+    .custom-checkbox:checked::after {
+        content: "✓";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 16px;
+        font-weight: bold;
+        color: white;
+    }
+    .custom-checkbox:hover { transform: scale(1.1); }
+    .checkbox-label { font-size: 11px; color: #666; display: block; margin-top: 2px; }
+    .checkbox-container { text-align: center; }
+    #userSelect option:checked { background-color: #667eea; color: white; }
+</style>
+
+<script>
+    // Search functionality
+    document.getElementById('searchFields').addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('.field-row');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchText) ? '' : 'none';
+        });
+    });
+
+    // Manual form submit on user select (without auto-submit)
+    document.getElementById('userSelect').addEventListener('change', function() {
+        document.getElementById('permissionForm').submit();
+    });
+</script>
+{% endblock %}

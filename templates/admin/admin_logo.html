@@ -1,0 +1,54 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="display-6 fw-bold" style="color: #1a237e;">
+            <i class="bi bi-image"></i> Logo Management
+        </h1>
+        <p class="text-muted">Upload and manage your organization logo</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body">
+                <!-- Current Logo -->
+                <div class="mb-4 text-center">
+                    <h5 class="fw-bold">Current Logo</h5>
+                    <div class="border rounded-3 p-4 bg-light">
+                        {% if logo_url %}
+                            <img src="{{ logo_url }}" alt="Logo" style="max-height: 100px; width: auto;">
+                            <br>
+                            <form action="{{ url_for('remove_logo') }}" method="POST" class="mt-3">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove the logo?')">
+                                    <i class="bi bi-trash"></i> Remove Logo
+                                </button>
+                            </form>
+                        {% else %}
+                            <p class="text-muted">No logo uploaded yet</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Upload New Logo -->
+                <div>
+                    <h5 class="fw-bold">Upload New Logo</h5>
+                    <form action="{{ url_for('upload_logo') }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="logoInput" class="form-label">Choose Logo Image</label>
+                            <input type="file" class="form-control" id="logoInput" name="logo" accept=".png,.jpg,.jpeg,.webp" required>
+                            <small class="text-muted">Recommended: PNG with transparent background, 200x80px</small>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-cloud-upload"></i> Upload Logo
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

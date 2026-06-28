@@ -1,0 +1,205 @@
+{% extends "admin/layout.html" %}
+
+{% block extra_css %}
+<style>
+    .category-card { border-left: 4px solid #667eea; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+    .field-tag { background: #e9ecef; padding: 4px 10px; border-radius: 15px; margin: 3px; display: inline-block; font-size: 12px; }
+    .selected-fields-info {
+        background: #e8f5e9;
+        padding: 8px 12px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-size: 14px;
+    }
+    /* ✅ Simple multi-select style */
+    #fieldSelect {
+        min-height: 120px;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        width: 100%;
+    }
+    #fieldSelect option {
+        padding: 6px 10px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+    }
+    #fieldSelect option:hover {
+        background-color: #667eea;
+        color: white;
+    }
+    #fieldSelect option:checked {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .multi-select-container {
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        padding: 5px;
+        background: white;
+    }
+    .multi-select-container select {
+        border: none !important;
+        outline: none !important;
+    }
+    .multi-select-container select:focus {
+        box-shadow: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-tags"></i> Category Management</h2>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- CREATE CATEGORY -->
+<div class="card-box">
+    <h5><i class="bi bi-plus-circle"></i> Create New Category</h5>
+    <form method="POST" action="/admin/categories/create" class="row g-2">
+        <div class="col-md-4">
+            <input type="text" name="name" class="form-control" placeholder="Category Name" required>
+        </div>
+        <div class="col-md-5">
+            <input type="text" name="description" class="form-control" placeholder="Description (Optional)">
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100"><i class="bi bi-plus-circle"></i> Create Category</button>
+        </div>
+    </form>
+</div>
+
+<!-- ASSIGN MULTIPLE FIELDS TO CATEGORY -->
+<div class="card-box">
+    <h5><i class="bi bi-link"></i> Assign Multiple Fields to Category</h5>
+    <form method="POST" action="/admin/categories/assign-multiple-fields" class="row g-2" id="assignForm">
+        <div class="col-md-3">
+            <select name="category_id" class="form-select" required>
+                <option value="">Select Category</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-7">
+            <!-- ✅ SIMPLE MULTI-SELECT - No Select2 -->
+            <div class="multi-select-container">
+                <select name="field_ids" id="fieldSelect" multiple="multiple" size="6" required>
+                    {% if fields %}
+                        {% for field in fields %}
+                            <option value="{{ field.id }}">{{ field.field_name }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="">No fields available. Please sync Excel first.</option>
+                    {% endif %}
+                </select>
+            </div>
+            <small class="text-muted">Hold <kbd>Ctrl</kbd> (Windows) or <kbd>Cmd</kbd> (Mac) to select multiple fields.</small>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-success w-100" style="height: 50px; margin-top: 25px;">
+                <i class="bi bi-check-circle"></i> Assign
+            </button>
+        </div>
+    </form>
+    <div class="selected-fields-info" id="selectedFieldsInfo">
+        <i class="bi bi-info-circle"></i> 
+        <span id="selectedCount">0</span> fields selected
+    </div>
+</div>
+
+<!-- CATEGORIES LIST -->
+<div class="card-box">
+    <h5><i class="bi bi-list-ul"></i> Categories & Fields</h5>
+    
+    {% if categories %}
+        {% for category in categories %}
+            <div class="category-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">
+                            <i class="bi bi-folder"></i> {{ category.name }}
+                            <span class="badge bg-secondary">{{ category.fields|length }} fields</span>
+                        </h6>
+                        <small class="text-muted">{{ category.description or '' }}</small>
+                    </div>
+                    <div>
+                        <a href="/admin/categories/delete/{{ category.id }}" class="btn btn-sm btn-danger" 
+                           onclick="return confirm('Delete this category?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    {% for mapping in category.fields %}
+                        {% set field = fields|selectattr('id', 'equalto', mapping.field_id)|first %}
+                        {% if field %}
+                            <span class="field-tag">
+                                {{ field.field_name }}
+                                <form method="POST" action="/admin/categories/remove-field" class="d-inline">
+                                    <input type="hidden" name="mapping_id" value="{{ mapping.id }}">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0" 
+                                            onclick="return confirm('Remove this field?')">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle"></i> No categories created yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // ✅ Update selected count when selection changes
+        $('#fieldSelect').on('change', function() {
+            var count = $(this).find('option:selected').length;
+            $('#selectedCount').text(count);
+            
+            var selected = $(this).find('option:selected');
+            var names = [];
+            selected.each(function() {
+                names.push($(this).text());
+            });
+            
+            if (names.length > 0) {
+                $('#selectedFieldsInfo').html('<i class="bi bi-check-circle text-success"></i> <strong>' + count + '</strong> fields selected: <span class="text-primary">' + names.join(', ') + '</span>');
+            } else {
+                $('#selectedFieldsInfo').html('<i class="bi bi-info-circle"></i> <span id="selectedCount">0</span> fields selected');
+            }
+        });
+
+        // ✅ Validate form before submit
+        $('#assignForm').on('submit', function(e) {
+            var selected = $('#fieldSelect').find('option:selected');
+            if (selected.length === 0) {
+                e.preventDefault();
+                alert('⚠️ Please select at least one field!');
+                return false;
+            }
+            return true;
+        });
+    });
+</script>
+{% endblock %}

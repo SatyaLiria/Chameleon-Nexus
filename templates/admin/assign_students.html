@@ -1,0 +1,155 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<h2><i class="bi bi-person-plus"></i> Assign Students</h2>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card-box">
+    <form method="POST">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="fw-bold">Select User:</label>
+                <select name="user_id" class="form-select" id="userSelect" required>
+                    <option value="">-- Select User --</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}">
+                            {{ user.full_name or user.username }} ({{ user.email }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="fw-bold">Notes:</label>
+                <input type="text" name="notes" class="form-control" placeholder="Optional notes">
+            </div>
+            <div class="col-md-4 text-end">
+                <button type="submit" class="btn btn-success btn-lg mt-4">
+                    <i class="bi bi-check-circle"></i> Assign Selected
+                </button>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="d-flex gap-3">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+                        <i class="bi bi-check-all"></i> Select All
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
+                        <i class="bi bi-x-circle"></i> Deselect All
+                    </button>
+                    <span class="badge bg-primary fs-6" id="selectedCount">0 selected</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <input type="text" class="form-control search-box float-end" placeholder="Search students..." id="searchStudents" style="max-width:300px;">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="studentTable">
+                <thead>
+                    <tr>
+                        <th width="50">
+                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleAll(this)">
+                        </th>
+                        <th>Roll Number</th>
+                        <th>Student Name</th>
+                        <th>Program</th>
+                        <th>Major</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        {% set assigned = false %}
+                        {% if request.form and request.form.get('user_id') %}
+                            {% set assigned = student.id in assigned_student_ids.get(request.form.get('user_id')|int, []) %}
+                        {% endif %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="student_ids" value="{{ student.id }}" 
+                                       class="student-checkbox student-select"
+                                       {% if assigned %}checked disabled{% endif %}
+                                       onchange="updateCount()">
+                                {% if assigned %}
+                                    <span class="badge bg-success">Assigned</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ student.roll_number }}</strong></td>
+                            <td>{{ student.student_name }}</td>
+                            <td>{{ student.program }}</td>
+                            <td>{{ student.major }}</td>
+                            <td>
+                                {% if assigned %}
+                                    <span class="badge bg-success">✓ Assigned</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Not Assigned</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                <i class="bi bi-inbox fs-1 d-block"></i>
+                                No students found. Please sync Excel first.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+<style>
+    .search-box { max-width: 300px; }
+    .student-checkbox { width: 20px; height: 20px; cursor: pointer; }
+</style>
+
+<script>
+    function updateCount() {
+        const checked = document.querySelectorAll('.student-select:checked').length;
+        document.getElementById('selectedCount').textContent = checked + ' selected';
+    }
+    
+    function selectAll() {
+        document.querySelectorAll('.student-select:not(:disabled)').forEach(cb => cb.checked = true);
+        updateCount();
+    }
+    
+    function deselectAll() {
+        document.querySelectorAll('.student-select:not(:disabled)').forEach(cb => cb.checked = false);
+        updateCount();
+    }
+    
+    function toggleAll(master) {
+        document.querySelectorAll('.student-select:not(:disabled)').forEach(cb => cb.checked = master.checked);
+        updateCount();
+    }
+    
+    // Search functionality
+    document.getElementById('searchStudents').addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#studentTable tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchText) ? '' : 'none';
+        });
+    });
+    
+    // Auto-update count on page load
+    document.addEventListener('DOMContentLoaded', updateCount);
+</script>
+{% endblock %}

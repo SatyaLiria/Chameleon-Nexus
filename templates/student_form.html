@@ -1,0 +1,654 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Student Search -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="bi bi-person-badge"></i> Student Profile</h2>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- ✅ STUDENT SEARCH DROPDOWN -->
+            <div class="student-search-container">
+                <div class="search-input-wrapper">
+                    <input type="text" class="form-control" id="studentSearch" 
+                           placeholder="🔍 Search by Roll No, Name, Mobile, Email..." 
+                           autocomplete="off">
+                    <div class="search-spinner" id="searchSpinner" style="display:none;">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-results" id="searchResults" style="display:none;">
+                    <div class="search-result-item" id="noResult" style="display:none;">
+                        <span class="text-muted">No students found</span>
+                    </div>
+                </div>
+            </div>
+            <span class="badge bg-primary fs-6" id="resultCount">{{ student_data|length if student else 0 }} fields</span>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- STUDENT INFO CARD WITH PHOTO -->
+    <!-- ============================================================ -->
+    {% if student %}
+    <div class="card-box mb-3" id="studentInfoCard">
+        <div class="row align-items-center">
+            <div class="col-md-2 text-center">
+                <div class="profile-photo">
+                    <!-- ============================================================ -->
+                    <!-- ✅ UPDATED: Photo from Cloudinary / Supabase                    -->
+                    <!-- ============================================================ -->
+                    {% if student_data and student_data.get('photo_url') %}
+                        <img src="{{ student_data.photo_url }}" alt="Photo">
+                    {% elif student.photo_url %}
+                        <img src="{{ student.photo_url }}" alt="Photo">
+                    {% elif student.photo_path %}
+                        <img src="{{ student.photo_path }}" alt="Photo">
+                    {% elif student.photo_filename %}
+                        <img src="{{ url_for('static', filename='uploads/student_photos/' + student.photo_filename) }}" alt="Photo">
+                    {% else %}
+                        <i class="bi bi-person-circle"></i>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h3 class="mb-1 student-name">{{ student.student_name }}</h3>
+                        <p class="mb-1"><i class="bi bi-mortarboard"></i> {{ student.program }} - {{ student.major }}</p>
+                        <p class="mb-0"><i class="bi bi-envelope"></i> {{ student_data.get('lms_email', '') if student_data else '' }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="mb-1"><strong>Roll Number:</strong> {{ student.roll_number }}</div>
+                        <div class="mb-1"><strong>ABC ID:</strong> {{ student.abc_id }}</div>
+                        <div><strong>DEB ID:</strong> {{ student.deb_id }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 
+        <strong>No student selected.</strong> Search and select a student from the dropdown above.
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- DYNAMIC TABS AND CONTENT -->
+    <!-- ============================================================ -->
+    {% if categories %}
+    <div class="card-box" id="studentDetails">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="studentTabs" role="tablist">
+            {% for category in categories %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if loop.first %}active{% endif %}" 
+                            id="tab-{{ category.id }}" 
+                            data-bs-toggle="tab" 
+                            data-bs-target="#content-{{ category.id }}" 
+                            type="button" role="tab">
+                        <i class="bi bi-folder"></i> {{ category.name }}
+                        <span class="badge">{{ category_fields.get(category.id, [])|length }}</span>
+                    </button>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-3" id="studentTabsContent">
+            {% for category in categories %}
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                     id="content-{{ category.id }}" 
+                     role="tabpanel">
+                    
+                    <div class="row">
+                        {% set fields = category_fields.get(category.id, []) %}
+                        {% if fields %}
+                            {% for field in fields %}
+                                <div class="col-md-4 col-lg-3 mb-3 field-item" data-field="{{ field.field_name|lower }}">
+                                    <div class="field-card">
+                                        <div class="field-card-body">
+                                            <div class="field-label">{{ field.display_name }}</div>
+                                            <div class="field-value" 
+                                                 data-field-name="{{ field.field_name }}"
+                                                 data-value="{{ student_data.get(field.field_name, '') if student_data else '' }}">
+                                                {{ student_data.get(field.field_name, '-') if student_data else '-' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12">
+                                <p class="text-muted text-center py-3">No fields assigned to this category.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> 
+        <strong>No categories defined!</strong> 
+        Go to <a href="/admin/categories">Category Management</a> to create categories and assign fields.
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .card-box {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    /* ============================================================ */
+    /* PROFILE PHOTO */
+    /* ============================================================ */
+    .profile-photo {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: #e9ecef;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 70px;
+        color: #6c757d;
+        border: 4px solid #1a237e;
+        overflow: hidden;
+        flex-shrink: 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .profile-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .profile-photo i {
+        font-size: 70px;
+        color: #adb5bd;
+    }
+    .student-name {
+        color: #1a237e;
+        font-weight: 600;
+    }
+
+    /* ============================================================ */
+    /* STUDENT SEARCH DROPDOWN */
+    /* ============================================================ */
+    .student-search-container {
+        position: relative;
+        min-width: 350px;
+    }
+    .search-input-wrapper {
+        position: relative;
+    }
+    .search-input-wrapper .form-control {
+        padding-right: 35px;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s;
+    }
+    .search-input-wrapper .form-control:focus {
+        border-color: #1a237e;
+        box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.25);
+    }
+    .search-spinner {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-top: -1px;
+    }
+    .search-result-item {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .search-result-item:hover {
+        background: #e8f0fe;
+    }
+    .search-result-item .result-roll {
+        font-weight: 600;
+        color: #1a237e;
+        font-size: 14px;
+    }
+    .search-result-item .result-name {
+        font-weight: 500;
+        color: #212529;
+    }
+    .search-result-item .result-email {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    .search-result-item .result-mobile {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    .search-result-item .result-badge {
+        font-size: 10px;
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+    .search-result-item .highlight {
+        background-color: #ffeb3b;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+    .search-results::-webkit-scrollbar {
+        width: 6px;
+    }
+    .search-results::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    .search-results::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    .search-results::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    /* ============================================================ */
+    /* TABS */
+    /* ============================================================ */
+    .nav-tabs {
+        border-bottom: 2px solid #e9ecef;
+        flex-wrap: wrap;
+    }
+    .nav-tabs .nav-link {
+        color: #495057;
+        font-weight: 500;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 10px 20px;
+        background: transparent;
+        transition: all 0.3s;
+    }
+    .nav-tabs .nav-link:hover {
+        color: #1a237e;
+        background: transparent;
+        border-bottom-color: #e9ecef;
+    }
+    .nav-tabs .nav-link.active {
+        color: #1a237e;
+        background: transparent;
+        border-bottom: 3px solid #1a237e;
+    }
+    .nav-tabs .nav-link .badge {
+        background: #e9ecef;
+        color: #495057;
+        margin-left: 5px;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+    .nav-tabs .nav-link.active .badge {
+        background: #1a237e;
+        color: white;
+    }
+
+    /* ============================================================ */
+    /* FIELD CARDS */
+    /* ============================================================ */
+    .field-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: white;
+        transition: all 0.3s;
+        height: 100%;
+    }
+    .field-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+        border-color: #1a237e;
+    }
+    .field-card-body {
+        padding: 15px;
+    }
+    .field-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+    .field-value {
+        font-size: 16px;
+        font-weight: 500;
+        color: #212529;
+        min-height: 24px;
+        word-break: break-word;
+    }
+    .search-highlight {
+        background-color: #ffeb3b;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+
+    /* ============================================================ */
+    /* RESPONSIVE */
+    /* ============================================================ */
+    @media (max-width: 768px) {
+        .student-search-container {
+            min-width: 200px;
+            width: 100%;
+        }
+        .nav-tabs .nav-link {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        .profile-photo {
+            width: 90px;
+            height: 90px;
+            font-size: 40px;
+        }
+        .profile-photo i {
+            font-size: 40px;
+        }
+        .field-value {
+            font-size: 14px;
+        }
+        .student-name {
+            font-size: 20px;
+        }
+        .text-end {
+            text-align: left !important;
+            margin-top: 10px;
+        }
+        .col-md-4 {
+            margin-bottom: 10px;
+        }
+        .search-result-item {
+            flex-wrap: wrap;
+        }
+    }
+    @media (max-width: 576px) {
+        .field-card-body {
+            padding: 10px;
+        }
+        .field-label {
+            font-size: 10px;
+        }
+        .field-value {
+            font-size: 13px;
+        }
+        .nav-tabs .nav-link {
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+        .profile-photo {
+            width: 70px;
+            height: 70px;
+            font-size: 30px;
+        }
+        .profile-photo i {
+            font-size: 30px;
+        }
+        .search-result-item .result-email,
+        .search-result-item .result-mobile {
+            font-size: 10px;
+        }
+    }
+</style>
+
+<script>
+    // ============================================================
+    // STUDENT SEARCH FROM DATABASE
+    // ============================================================
+    let searchTimeout = null;
+    const searchInput = document.getElementById('studentSearch');
+    const searchResults = document.getElementById('searchResults');
+    const searchSpinner = document.getElementById('searchSpinner');
+    const noResult = document.getElementById('noResult');
+
+    // ============================================================
+    // PERFORM SEARCH - AJAX CALL TO SERVER
+    // ============================================================
+    function performStudentSearch() {
+        const query = searchInput.value.trim();
+        
+        if (query.length === 0) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        searchSpinner.style.display = 'block';
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = '';
+
+        // AJAX call to search students
+        fetch(`/search-students?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                searchSpinner.style.display = 'none';
+                
+                if (data.length === 0) {
+                    noResult.style.display = 'block';
+                    searchResults.appendChild(noResult);
+                    return;
+                }
+
+                // Display results
+                data.forEach(student => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    
+                    // Highlight matching text
+                    const roll = highlightText(student.roll_number || '', query);
+                    const name = highlightText(student.student_name || '', query);
+                    const email = highlightText(student.lms_email || '', query);
+                    const mobile = highlightText(student.mobile_no || '', query);
+                    
+                    div.innerHTML = `
+                        <div>
+                            <div><span class="result-roll">${roll}</span> - <span class="result-name">${name}</span></div>
+                            <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
+                                <span class="result-email">${email}</span>
+                                <span class="result-mobile">${mobile}</span>
+                                <span class="result-badge">${student.program || ''}</span>
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:#6c757d;"></i>
+                    `;
+                    
+                    div.addEventListener('click', function() {
+                        selectStudent(student);
+                    });
+                    
+                    searchResults.appendChild(div);
+                });
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchSpinner.style.display = 'none';
+                searchResults.innerHTML = '<div class="search-result-item text-danger">Error searching students</div>';
+            });
+    }
+
+    // ============================================================
+    // HIGHLIGHT TEXT
+    // ============================================================
+    function highlightText(text, query) {
+        if (!text) return '';
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    // ============================================================
+    // SELECT STUDENT - ✅ FIXED: Redirect with student_id
+    // ============================================================
+    function selectStudent(student) {
+        // Update search input
+        searchInput.value = `${student.roll_number} - ${student.student_name}`;
+        searchResults.style.display = 'none';
+        
+        // ✅ FIX: Redirect to student form with student_id
+        window.location.href = `/student-form?student_id=${student.id}`;
+    }
+
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(performStudentSearch, 300);
+    });
+
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length > 0) {
+            performStudentSearch();
+        }
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.student-search-container')) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Enter key handling
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const firstResult = searchResults.querySelector('.search-result-item');
+            if (firstResult && firstResult !== noResult) {
+                firstResult.click();
+            }
+        }
+        if (e.key === 'Escape') {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // ============================================================
+    // FIELD SEARCH (Existing fields search)
+    // ============================================================
+    document.getElementById('searchInput')?.addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase().trim();
+        const fieldItems = document.querySelectorAll('.field-item');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        let visibleCount = 0;
+        
+        // Remove previous highlights
+        document.querySelectorAll('.search-highlight').forEach(el => {
+            const parent = el.parentNode;
+            parent.textContent = parent.textContent.replace('highlight', '');
+        });
+        
+        if (searchText === '') {
+            fieldItems.forEach(item => item.style.display = 'block');
+            tabPanes.forEach(pane => pane.style.display = 'block');
+            document.getElementById('resultCount').textContent = fieldItems.length + ' fields';
+            return;
+        }
+        
+        // Search in each field
+        fieldItems.forEach(item => {
+            const fieldLabel = item.querySelector('.field-label')?.textContent?.toLowerCase() || '';
+            const fieldValue = item.querySelector('.field-value')?.textContent?.toLowerCase() || '';
+            const fieldData = item.querySelector('.field-value')?.dataset?.value?.toLowerCase() || '';
+            
+            const match = fieldLabel.includes(searchText) || 
+                         fieldValue.includes(searchText) || 
+                         fieldData.includes(searchText);
+            
+            if (match) {
+                item.style.display = 'block';
+                visibleCount++;
+                
+                // Highlight matching text
+                const valueDiv = item.querySelector('.field-value');
+                if (valueDiv) {
+                    const originalText = valueDiv.dataset.value || valueDiv.textContent;
+                    if (originalText.toLowerCase().includes(searchText)) {
+                        const regex = new RegExp(`(${searchText})`, 'gi');
+                        const highlighted = originalText.replace(regex, '<span class="search-highlight">$1</span>');
+                        valueDiv.innerHTML = highlighted;
+                    }
+                }
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Show/hide tab panes
+        tabPanes.forEach(pane => {
+            const visibleItems = pane.querySelectorAll('.field-item[style*="display: block"]');
+            pane.style.display = visibleItems.length > 0 ? 'block' : 'none';
+        });
+        
+        document.getElementById('resultCount').textContent = visibleCount + ' fields matched';
+    });
+
+    // Reset highlights when search cleared
+    document.getElementById('searchInput')?.addEventListener('blur', function() {
+        if (this.value === '') {
+            document.querySelectorAll('.field-value').forEach(el => {
+                const originalText = el.dataset.value || el.textContent;
+                el.textContent = originalText;
+            });
+        }
+    });
+
+    // Handle Enter key to prevent form submission
+    document.getElementById('searchInput')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+        }
+    });
+
+    // ✅ FIX: Handle page load - if student_id in URL, pre-fill search
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('student_id');
+        if (studentId) {
+            // Fetch student details to pre-fill search
+            fetch(`/search-students?q=${studentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const student = data[0];
+                        searchInput.value = `${student.roll_number} - ${student.student_name}`;
+                    }
+                })
+                .catch(error => console.error('Error fetching student:', error));
+        }
+    });
+</script>
+
+<!-- Bootstrap JS for Tabs -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

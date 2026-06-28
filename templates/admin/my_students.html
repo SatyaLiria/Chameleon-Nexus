@@ -1,0 +1,70 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<h2><i class="bi bi-mortarboard"></i> My Students</h2>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card-box">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5><i class="bi bi-list-ul"></i> Assigned Students</h5>
+        <span class="badge bg-primary fs-6">{{ total_students }} students</span>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-hover" id="studentTable">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Roll Number</th>
+                    <th>Student Name</th>
+                    {% for field in visible_fields %}
+                        <th>{{ field.display_name }}</th>
+                    {% endfor %}
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if students %}
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ student.roll_number }}</strong></td>
+                            <td>{{ student.student_name }}</td>
+                            {% for field in visible_fields %}
+                                <td>{{ student.get(field.field_name, '-') }}</td>
+                            {% endfor %}
+                            <td>
+                                <a href="{{ url_for('view_student', student_id=student.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="{{ 4 + visible_fields|length }}" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox display-6 d-block"></i>
+                            {% if visible_fields|length == 0 %}
+                                No fields assigned. Please configure column permissions.
+                            {% else %}
+                                No students assigned to you.
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

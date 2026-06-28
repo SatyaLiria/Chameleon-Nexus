@@ -1,0 +1,1414 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- TOP ROW - Tabs (Left) + Search & Upload (Right) -->
+<!-- ============================================================ -->
+<div class="top-row-wrapper">
+    <!-- Left: Tabs -->
+    <div class="admin-top-tabs">
+        <ul class="nav nav-tabs" id="adminTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a href="/admin/student-verification" class="nav-link active" id="verification-tab">
+                    <i class="bi bi-person-check"></i> 
+                    <span>Student Verification Data</span>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a href="/admin/verification-tickets" class="nav-link" id="tickets-tab">
+                    <i class="bi bi-ticket"></i> 
+                    <span>Tickets</span>
+                    {% if ticket_count and ticket_count > 0 %}
+                        <span class="badge bg-danger pulse-badge">{{ ticket_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a href="/admin/verification-notifications" class="nav-link" id="notifications-tab">
+                    <i class="bi bi-bell"></i> 
+                    <span>Notifications</span>
+                    {% if notification_count and notification_count > 0 %}
+                        <span class="badge bg-danger pulse-badge">{{ notification_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Right: Search + Upload -->
+    <div class="search-upload-wrapper">
+        <!-- Search Bar -->
+        <div class="search-section">
+            <div class="search-bar-wrapper">
+                <div class="search-icon">
+                    <i class="bi bi-search"></i>
+                </div>
+                <input type="text" 
+                       id="adminGlobalSearch" 
+                       class="search-input" 
+                       placeholder="Search students..." 
+                       autocomplete="off">
+                <button class="search-btn" onclick="performAdminSearch()">
+                    <i class="bi bi-search"></i> Search
+                </button>
+                <button class="search-clear-btn" id="searchClearBtn" onclick="clearAdminSearch()">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+            <div class="search-shortcut">⌘K</div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <div class="upload-container">
+                <form id="excelUploadForm" method="POST" action="/admin/upload-verification-excel" enctype="multipart/form-data">
+                    <div class="upload-wrapper">
+                        <div class="file-input-wrapper">
+                            <input type="file" name="excel_file" id="excelFileInput" accept=".xlsx,.xls" onchange="updateFileName(this)">
+                            <span class="file-placeholder" id="filePlaceholder">
+                                <i class="bi bi-cloud-upload"></i> Choose File
+                            </span>
+                            <span class="file-name" id="fileNameDisplay"></span>
+                            <button type="button" class="btn-remove-file" id="removeFileBtn" onclick="clearFileInput()" style="display:none;">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                        <button class="btn-upload" type="submit" id="uploadExcelBtn">
+                            <i class="bi bi-upload"></i> Upload
+                        </button>
+                    </div>
+                </form>
+                <small class="text-muted upload-helper" id="uploadHelperText">
+                    <i class="bi bi-info-circle"></i> Upload Student_Details_Verification.xlsx
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- STUDENT PROFILE VERIFICATION FORM -->
+<!-- ============================================================ -->
+{% if student %}
+<div class="main-container">
+    <!-- HEADER -->
+    <div class="header">
+        <div>
+            <h2><i class="bi bi-person-check"></i> Student Profile Verification</h2>
+            <small>Chitkara University — CDOE (Distance and Online Education)</small>
+        </div>
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                {% if ticket_number %}
+                    <span class="badge bg-info" style="font-size:16px; padding:8px 16px;">
+                        <i class="bi bi-ticket"></i> Ticket: {{ ticket_number }}
+                    </span>
+                {% endif %}
+                {% if ticket_status %}
+                    <span class="badge {% if ticket_status == 'Pending' %}bg-warning{% elif ticket_status == 'Approved' %}bg-success{% elif ticket_status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size:14px; padding:8px 16px;">
+                        <i class="bi bi-clock"></i> {{ ticket_status }}
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary" style="font-size:14px; padding:8px 16px;">
+                        <i class="bi bi-clock"></i> Verification Pending
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE SECTION -->
+    <div class="profile-section">
+        <div class="row align-items-center">
+            <div class="col-md-2 text-center">
+                <div class="profile-photo">
+                    <!-- ============================================================ -->
+                    <!-- ✅ UPDATED: Photo from Cloudinary / Supabase                    -->
+                    <!-- ============================================================ -->
+                    {% if student.photo_url %}
+                        <img src="{{ student.photo_url }}" alt="Student Photo" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border: 3px solid #283593;">
+                    {% elif student_data and student_data.get('photo_url') %}
+                        <img src="{{ student_data.photo_url }}" alt="Student Photo" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border: 3px solid #283593;">
+                    {% elif student.photo_filename %}
+                        <img src="{{ url_for('static', filename='uploads/student_photos/' + student.photo_filename) }}" alt="Student Photo" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border: 3px solid #283593;">
+                    {% elif student.photo_path %}
+                        <img src="{{ student.photo_path }}" alt="Student Photo" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border: 3px solid #283593;">
+                    {% else %}
+                        <div style="width:120px; height:120px; border-radius:50%; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 50px; color: #6c757d; border: 3px solid #283593;">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="profile-name">{{ student.student_name }}</div>
+                        <div class="profile-meta">
+                            <i class="bi bi-mortarboard"></i> {{ student.program }} - {{ student.major }}
+                        </div>
+                        <div class="profile-meta">
+                            <i class="bi bi-envelope"></i> {{ student.lms_email }}
+                        </div>
+                        <div class="profile-meta">
+                            <i class="bi bi-phone"></i> {{ student.mobile_no }}
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="profile-meta">
+                            <strong>Roll Number:</strong> {{ student.roll_number }}
+                        </div>
+                        <div class="profile-meta"><strong>ABC ID:</strong> {{ student.abc_id }}</div>
+                        <div class="profile-meta"><strong>DEB ID:</strong> {{ student.deb_id }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="academic"><i class="bi bi-mortarboard"></i> Academic</button>
+        <button class="tab-btn" data-tab="personal"><i class="bi bi-person"></i> Personal</button>
+        <button class="tab-btn" data-tab="family"><i class="bi bi-people"></i> Family</button>
+        <button class="tab-btn" data-tab="communication"><i class="bi bi-geo-alt"></i> Communication</button>
+        <button class="tab-btn" data-tab="correction" id="correctionTabBtn"><i class="bi bi-pencil-square"></i> Correction</button>
+    </div>
+
+    <!-- TAB: ACADEMIC -->
+    <div id="tab-academic" class="tab-content active">
+        <div class="section-title"><i class="bi bi-mortarboard"></i> Academic Details</div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="detail-row"><span class="detail-label">Program</span><span class="detail-value">{{ student.program }}</span></div>
+                <div class="detail-row"><span class="detail-label">Major</span><span class="detail-value">{{ student.major }}</span></div>
+                <div class="detail-row"><span class="detail-label">Roll Number</span><span class="detail-value">{{ student.roll_number }}</span></div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-row"><span class="detail-label">ABC ID</span><span class="detail-value">{{ student.abc_id }}</span></div>
+                <div class="detail-row"><span class="detail-label">DEB ID</span><span class="detail-value">{{ student.deb_id }}</span></div>
+                <div class="detail-row"><span class="detail-label">LMS Email</span><span class="detail-value">{{ student.lms_email }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: PERSONAL -->
+    <div id="tab-personal" class="tab-content">
+        <div class="section-title"><i class="bi bi-person"></i> Personal Details</div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="detail-row"><span class="detail-label">Full Name</span><span class="detail-value">{{ student.student_name }}</span></div>
+                <div class="detail-row"><span class="detail-label">Date of Birth</span><span class="detail-value">{{ student.dob }}</span></div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-row"><span class="detail-label">Aadhar Number</span><span class="detail-value">{{ student.aadhar }}</span></div>
+                <div class="detail-row"><span class="detail-label">Mobile Number</span><span class="detail-value">{{ student.mobile_no }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: FAMILY -->
+    <div id="tab-family" class="tab-content">
+        <div class="section-title"><i class="bi bi-people"></i> Family Details</div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="detail-row"><span class="detail-label">Father's Name</span><span class="detail-value">{{ student.father_name }}</span></div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-row"><span class="detail-label">Mother's Name</span><span class="detail-value">{{ student.mother_name }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: COMMUNICATION -->
+    <div id="tab-communication" class="tab-content">
+        <div class="section-title"><i class="bi bi-geo-alt"></i> Communication Details</div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="detail-row"><span class="detail-label">Address</span><span class="detail-value">{{ student.address }}</span></div>
+            </div>
+            <div class="col-md-3">
+                <div class="detail-row"><span class="detail-label">City</span><span class="detail-value">{{ student.city }}</span></div>
+            </div>
+            <div class="col-md-3">
+                <div class="detail-row"><span class="detail-label">State</span><span class="detail-value">{{ student.state }}</span></div>
+            </div>
+            <div class="col-md-3">
+                <div class="detail-row"><span class="detail-label">Country</span><span class="detail-value">{{ student.country }}</span></div>
+            </div>
+            <div class="col-md-3">
+                <div class="detail-row"><span class="detail-label">PIN</span><span class="detail-value">{{ student.pin_code }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: CORRECTION -->
+    <div id="tab-correction" class="tab-content correction-tab disabled">
+        <div class="section-title"><i class="bi bi-pencil-square"></i> Request Correction</div>
+        <p class="text-muted">Select the fields you want to correct and provide the correct details.</p>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped" id="correctionTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:22%">Field Name</th>
+                        <th style="width:23%">Current Details</th>
+                        <th style="width:15%" class="text-center">Correction Required</th>
+                        <th style="width:40%">Correct Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if all_fields %}
+                        {% for field in all_fields %}
+                            <tr>
+                                <td><strong>{{ field.display_name }}</strong></td>
+                                <td>{{ student_data.get(field.field_name, '') }}</td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="correction-checkbox" 
+                                           data-field="{{ field.field_name }}"
+                                           onchange="toggleCorrection('{{ field.field_name }}')">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm correction-input" 
+                                           id="correct_{{ field.field_name }}"
+                                           data-field="{{ field.field_name }}"
+                                           placeholder="Enter correct value" disabled>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                No fields available for correction.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Document Upload Section -->
+        <div class="document-upload-section mt-3" id="documentUploadSection">
+            <div class="section-title"><i class="bi bi-paperclip"></i> Document Upload</div>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                <strong>Note:</strong> Documents are mandatory for corrections in <strong>Name, Father's Name, or Mother's Name</strong> fields.
+            </div>
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="file" class="form-control" name="documents" id="documentUpload" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                        <label class="input-group-text" for="documentUpload"><i class="bi bi-upload"></i> Choose Files</label>
+                    </div>
+                    <small class="text-muted">Upload supporting documents for correction requests (PDF, JPG, PNG - Max 5MB each)</small>
+                    <div id="fileList" class="mt-2"></div>
+                </div>
+                <div class="col-md-4">
+                    <div id="uploadStatus" class="text-muted small">
+                        <i class="bi bi-info-circle"></i> No files selected
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- KEEP CHECK -->
+    <!-- ============================================================ -->
+    <div class="keep-check-section">
+        <div class="section-title"><i class="bi bi-check-circle"></i> Just Keep a Check</div>
+        <div class="keep-check">
+            <ol>
+                <li>Kindly review all personal, academic, and contact details provided in this document to ensure they are accurate and up to date.</li>
+                <li>If any information requires correction, please share the relevant supporting documents so that we can assist you with the update process.</li>
+                <li>Details such as Name, Date of Birth, Father's Name, Mother's Name, ABC ID, DEB ID, Photograph, and Aadhaar-related information may require additional verification before changes can be confirmed.</li>
+                <li>Providing the necessary supporting documents will help us process your correction request smoothly and efficiently.</li>
+                <li>Verifying your details at this stage helps ensure that future academic records, marketsheets, certificates, and degree documents are generated accurately.</li>
+                <li>All update requests are reviewed in accordance with university records and established academic procedures.</li>
+                <li>In case no correction request is received within the specified timeline (One Month), the information available in university records will be considered verified and confirmed.</li>
+                <li>We encourage you to carefully review all details, as maintaining accurate records helps us provide you with seamless academic and administrative support throughout your program.</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- DECLARATION SECTION -->
+    <!-- ============================================================ -->
+    <div class="declaration-section">
+        <div class="section-title"><i class="bi bi-file-check"></i> Student Declaration</div>
+        <p class="declaration-text">
+            I hereby confirm that I have reviewed the above information. I understand that the details verified by me will be used for academic records, examinations, certificates, degree issuance, government reporting, and other university-related activities.
+        </p>
+
+        <form method="POST" action="/student-verification/submit" enctype="multipart/form-data" id="verificationForm">
+            <input type="hidden" name="roll_number" value="{{ student.roll_number }}">
+
+            <!-- Declaration Options -->
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="declaration" id="declarationYes" value="correct" checked onchange="toggleCorrectionForm(false)">
+                        <label class="form-check-label" for="declarationYes">
+                            <strong>✅ The above details are correct and no changes are required.</strong>
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="declaration" id="declarationNo" value="correction" onchange="toggleCorrectionForm(true)">
+                        <label class="form-check-label" for="declarationNo">
+                            <strong>📝 I request correction in the details mentioned below:</strong>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden inputs for corrections -->
+            <div id="correctionFieldsContainer"></div>
+
+            <!-- Agree & Submit -->
+            <div class="row mt-4">
+                <div class="col-md-12 text-center">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="agreeCheck" name="agree" required>
+                        <label class="form-check-label" for="agreeCheck">
+                            I agree to the <a href="#">Terms & Conditions</a> and confirm that all information provided is correct.
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <i class="bi bi-check-circle"></i> Agree & Submit
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info m-3">
+    <i class="bi bi-info-circle"></i> 
+    <strong>Select a student</strong> from the list above to verify their details.
+</div>
+{% endif %}
+
+<!-- ============================================================ -->
+<!-- STYLES -->
+<!-- ============================================================ -->
+<style>
+    /* ============================================================ */
+    /* TOP ROW - Tabs (Left) + Search & Upload (Right) */
+    /* ============================================================ */
+    .top-row-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #ffffff;
+        padding: 6px 16px;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .top-row-wrapper:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    /* Left: Tabs */
+    .admin-top-tabs {
+        flex: 0 1 auto;
+    }
+    .admin-top-tabs .nav-tabs {
+        border-bottom: none;
+        background: transparent;
+        border-radius: 8px;
+        padding: 0;
+        box-shadow: none;
+        gap: 2px;
+    }
+    .admin-top-tabs .nav-tabs .nav-item {
+        flex: 0 0 auto;
+        width: auto;
+        margin: 0;
+    }
+    .admin-top-tabs .nav-tabs .nav-link {
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-weight: 500;
+        color: #6c757d;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        text-decoration: none;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: transparent;
+        white-space: nowrap;
+    }
+    .admin-top-tabs .nav-tabs .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 2.5px;
+        background: linear-gradient(90deg, #1a237e, #3949ab);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateX(-50%);
+        border-radius: 2px;
+    }
+    .admin-top-tabs .nav-tabs .nav-link:hover {
+        color: #1a237e;
+        background: #f0f2ff;
+        transform: translateY(-1px);
+        text-decoration: none;
+    }
+    .admin-top-tabs .nav-tabs .nav-link.active {
+        color: #1a237e;
+        background: #e8eaf6;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(26, 35, 126, 0.12);
+    }
+    .admin-top-tabs .nav-tabs .nav-link.active::after {
+        width: 60%;
+    }
+    .admin-top-tabs .nav-tabs .nav-link .badge {
+        margin-left: 2px;
+        font-size: 9px;
+        padding: 1px 6px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    .admin-top-tabs .nav-tabs .nav-link i {
+        font-size: 14px;
+        transition: transform 0.3s ease;
+    }
+    .admin-top-tabs .nav-tabs .nav-link:hover i {
+        transform: scale(1.1);
+    }
+    .admin-top-tabs .nav-tabs .nav-link span {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    /* Pulse Animation for Badge */
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+    }
+    .pulse-badge {
+        animation: pulse 2s infinite;
+        display: inline-block;
+    }
+
+    /* Right: Search + Upload */
+    .search-upload-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 1 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .search-section {
+        flex: 0 1 280px;
+        min-width: 180px;
+        max-width: 300px;
+        position: relative;
+    }
+
+    .upload-section {
+        flex: 0 1 280px;
+        min-width: 180px;
+        max-width: 300px;
+    }
+
+    .search-section .search-shortcut {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 8px;
+        color: #adb5bd;
+        background: #f1f3f5;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-weight: 500;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        letter-spacing: 0.5px;
+    }
+    .search-section:hover .search-shortcut {
+        opacity: 1;
+    }
+
+    .search-bar-wrapper {
+        display: flex;
+        align-items: center;
+        background: #f8f9fa;
+        border: 1.5px solid #e9ecef;
+        border-radius: 8px;
+        padding: 3px 5px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .search-bar-wrapper:focus-within {
+        border-color: #1a237e;
+        box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.10);
+        background: #ffffff;
+        transform: translateY(-1px);
+    }
+    .search-icon {
+        padding: 0 6px;
+        color: #adb5bd;
+        font-size: 13px;
+        transition: color 0.3s ease;
+    }
+    .search-bar-wrapper:focus-within .search-icon {
+        color: #1a237e;
+    }
+    .search-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 4px 0;
+        font-size: 12px;
+        outline: none;
+        color: #1a2a4a;
+        min-width: 60px;
+        font-weight: 400;
+        letter-spacing: 0.3px;
+    }
+    .search-input::placeholder {
+        color: #adb5bd;
+        font-size: 11px;
+        font-weight: 400;
+    }
+    .search-btn {
+        background: linear-gradient(135deg, #1a237e, #283593);
+        color: white;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 4px rgba(26, 35, 126, 0.15);
+    }
+    .search-btn:hover {
+        background: linear-gradient(135deg, #0f1555, #1a237e);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(26, 35, 126, 0.25);
+    }
+    .search-btn:active {
+        transform: translateY(0px);
+        box-shadow: 0 2px 8px rgba(26, 35, 126, 0.15);
+    }
+    .search-btn i {
+        font-size: 11px;
+    }
+    .search-clear-btn {
+        background: transparent;
+        border: none;
+        color: #adb5bd;
+        padding: 2px 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: none;
+        border-radius: 50%;
+    }
+    .search-clear-btn:hover {
+        color: #dc3545;
+        background: #fff0f0;
+        transform: scale(1.1);
+    }
+    .search-clear-btn.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.8); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ============================================================ */
+    /* FILE UPLOAD */
+    /* ============================================================ */
+    .upload-container {
+        width: 100%;
+    }
+    .upload-wrapper {
+        display: flex;
+        align-items: center;
+        background: #f8f9fa;
+        border: 1.5px solid #e9ecef;
+        border-radius: 8px;
+        padding: 3px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        gap: 3px;
+    }
+    .upload-wrapper:focus-within {
+        border-color: #1a237e;
+        box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.10);
+        background: #ffffff;
+        transform: translateY(-1px);
+    }
+    .upload-wrapper:hover {
+        border-color: #1a237e;
+    }
+    .file-input-wrapper {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+        padding: 0 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 28px;
+    }
+    .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        font-size: 0;
+    }
+    .file-placeholder {
+        color: #6c757d;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        font-weight: 400;
+        transition: color 0.3s ease;
+    }
+    .file-placeholder i {
+        font-size: 13px;
+        color: #1a237e;
+        transition: transform 0.3s ease;
+    }
+    .file-input-wrapper:hover .file-placeholder i {
+        transform: translateY(-2px);
+    }
+    .file-name {
+        color: #1a237e;
+        font-weight: 500;
+        font-size: 11px;
+        display: none;
+        align-items: center;
+        gap: 3px;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        animation: fadeIn 0.3s ease;
+    }
+    .file-name.show {
+        display: inline-flex;
+    }
+    .file-placeholder.hide {
+        display: none;
+    }
+    .btn-remove-file {
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        font-size: 12px;
+        cursor: pointer;
+        padding: 2px 3px;
+        transition: all 0.2s ease;
+        display: none;
+        flex-shrink: 0;
+        border-radius: 50%;
+    }
+    .btn-remove-file:hover {
+        transform: scale(1.2);
+        background: #fff0f0;
+    }
+    .btn-remove-file.show {
+        display: block;
+    }
+    .btn-upload {
+        background: linear-gradient(135deg, #28a745, #218838);
+        color: white;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 4px rgba(40, 167, 69, 0.15);
+    }
+    .btn-upload:hover {
+        background: linear-gradient(135deg, #1e7e34, #28a745);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25);
+    }
+    .btn-upload:active {
+        transform: translateY(0px);
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+    }
+    .btn-upload:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .btn-upload i {
+        font-size: 12px;
+    }
+    .upload-helper {
+        font-size: 9px;
+        display: block;
+        text-align: right;
+        margin-top: 3px;
+        color: #adb5bd;
+        line-height: 1.2;
+        transition: color 0.3s ease;
+    }
+    .upload-helper:hover {
+        color: #6c757d;
+    }
+    .upload-helper i {
+        font-size: 9px;
+    }
+
+    /* ============================================================ */
+    /* MAIN CONTAINER - FULL WIDTH */
+    /* ============================================================ */
+    .main-container {
+        max-width: 100%;
+        margin: 30px 0;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .header {
+        background: linear-gradient(135deg, #1a237e, #283593);
+        color: white;
+        padding: 22px 35px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .header h2 { margin: 0; font-weight: 600; font-size: 22px; }
+    .header .badge { background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px; }
+    .header .badge.bg-info { background: #17a2b8 !important; }
+    .profile-section { padding: 22px 35px; border-bottom: 1px solid #e9ecef; }
+    .profile-photo { width: 120px; height: 120px; border-radius: 50%; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 50px; color: #6c757d; border: 3px solid #283593; margin: 0 auto; overflow: hidden; }
+    .profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-name { font-size: 22px; font-weight: 600; color: #1a237e; }
+    .profile-meta { color: #6c757d; font-size: 14px; padding: 2px 0; }
+    .section-title { font-size: 16px; font-weight: 600; color: #1a237e; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 15px; }
+    .section-title i { margin-right: 8px; }
+    .detail-row { display: flex; padding: 6px 0; border-bottom: 1px solid #f8f9fa; }
+    .detail-label { width: 35%; font-weight: 500; color: #495057; }
+    .detail-value { width: 65%; color: #212529; }
+
+    /* KEEP CHECK */
+    .keep-check-section {
+        padding: 20px 35px 10px 35px;
+        background: #ffffff;
+    }
+    .keep-check {
+        background: #fff8e1;
+        padding: 18px 22px;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+        margin-bottom: 0;
+    }
+    .keep-check ol {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+    .keep-check li {
+        margin-bottom: 6px;
+        font-size: 14px;
+        color: #495057;
+    }
+
+    .declaration-section { padding: 10px 35px 25px 35px; background: #f8f9fa; }
+    .declaration-text { font-size: 14px; color: #495057; line-height: 1.8; }
+    .btn-submit { background: linear-gradient(135deg, #1a237e, #283593); color: white; padding: 12px 40px; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s; }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(26, 35, 126, 0.4); }
+    .tabs { display: flex; gap: 5px; padding: 0 35px; background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-wrap: wrap; }
+    .tab-btn { padding: 12px 20px; border: none; background: transparent; font-weight: 500; color: #6c757d; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; }
+    .tab-btn:hover { color: #1a237e; }
+    .tab-btn.active { color: #1a237e; border-bottom-color: #1a237e; }
+    .tab-content { display: none; padding: 20px 35px; }
+    .tab-content.active { display: block; }
+    .tab-content.correction-tab.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    .tab-content.correction-tab {
+        transition: all 0.3s ease;
+    }
+    .correction-table.disabled { opacity: 0.5; pointer-events: none; }
+    .document-upload-section { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #dee2e6; }
+    #fileList .badge { margin: 3px; }
+
+    /* ============================================================ */
+    /* RESPONSIVE */
+    /* ============================================================ */
+    @media (max-width: 992px) {
+        .top-row-wrapper {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .search-upload-wrapper {
+            justify-content: stretch;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .search-section {
+            flex: 1 1 100%;
+            min-width: unset;
+            max-width: 100%;
+        }
+        .upload-section {
+            flex: 1 1 100%;
+            min-width: unset;
+            max-width: 100%;
+        }
+        .upload-wrapper {
+            flex-wrap: wrap;
+            border-radius: 8px;
+            padding: 3px;
+        }
+        .file-input-wrapper {
+            flex-basis: 100%;
+            min-height: 28px;
+            padding: 2px 6px;
+        }
+        .btn-upload {
+            width: 100%;
+            justify-content: center;
+            padding: 5px;
+        }
+        .upload-helper {
+            text-align: left;
+        }
+        .search-bar-wrapper {
+            flex-wrap: wrap;
+            padding: 3px 6px;
+        }
+        .search-input {
+            width: 100%;
+            flex-basis: 100%;
+            padding: 3px 0;
+        }
+        .search-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 5px;
+            margin-top: 3px;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .search-section .search-shortcut {
+            display: none;
+        }
+        .admin-top-tabs .nav-tabs {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            justify-content: flex-start;
+            gap: 2px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .admin-top-tabs .nav-tabs .nav-link {
+            padding: 6px 12px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .admin-top-tabs .nav-tabs .nav-link span {
+            font-size: 12px;
+        }
+        .admin-top-tabs .nav-tabs .nav-link i {
+            font-size: 13px;
+        }
+    }
+    @media (max-width: 768px) {
+        .detail-row { flex-direction: column; padding: 6px 0; }
+        .detail-label { width: 100%; font-size: 12px; }
+        .detail-value { width: 100%; font-size: 14px; }
+        .tabs { overflow-x: auto; padding: 0 15px; flex-wrap: nowrap; }
+        .tab-btn { font-size: 13px; padding: 10px 15px; white-space: nowrap; }
+        .header { flex-direction: column; text-align: center; gap: 10px; padding: 18px 20px; }
+        .profile-photo { width: 80px; height: 80px; font-size: 30px; }
+        .main-container { margin: 10px 0; }
+        .profile-section { padding: 18px 20px; }
+        .profile-section .row { flex-direction: column; text-align: center; }
+        .profile-section .col-md-4.text-end { text-align: center !important; }
+        .tab-content { padding: 16px 20px; }
+        .declaration-section { padding: 10px 20px 20px 20px; }
+        .keep-check-section { padding: 15px 20px 5px 20px; }
+        .admin-top-tabs .nav-tabs .nav-link {
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+        .admin-top-tabs .nav-tabs .nav-link .badge {
+            font-size: 8px;
+            padding: 1px 5px;
+        }
+        .admin-top-tabs .nav-tabs .nav-link span {
+            font-size: 11px;
+        }
+        .tab-pane h4 { font-size: 18px; }
+    }
+    @media (max-width: 576px) {
+        .top-row-wrapper {
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+        .search-bar-wrapper {
+            border-radius: 8px;
+            padding: 3px 6px;
+        }
+        .search-btn {
+            font-size: 10px;
+            padding: 4px 10px;
+        }
+        .upload-wrapper {
+            border-radius: 8px;
+        }
+        .file-placeholder {
+            font-size: 10px;
+        }
+        .file-placeholder i {
+            font-size: 12px;
+        }
+        .file-name {
+            font-size: 10px;
+            max-width: 60px;
+        }
+        .btn-upload {
+            font-size: 10px;
+            padding: 4px 10px;
+        }
+        .keep-check li {
+            font-size: 13px;
+        }
+        .admin-top-tabs .nav-tabs .nav-link {
+            font-size: 10px;
+            padding: 5px 8px;
+        }
+        .admin-top-tabs .nav-tabs .nav-link i {
+            font-size: 11px;
+        }
+        .admin-top-tabs .nav-tabs .nav-link span {
+            font-size: 10px;
+        }
+        .upload-helper {
+            font-size: 8px;
+        }
+        .search-input::placeholder {
+            font-size: 10px;
+        }
+        .search-section .search-shortcut {
+            display: none;
+        }
+    }
+</style>
+
+<script>
+// ============================================================
+// FILE UPLOAD - Custom File Name Display & Remove (X) Button
+// ============================================================
+function updateFileName(input) {
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const filePlaceholder = document.getElementById('filePlaceholder');
+    const removeBtn = document.getElementById('removeFileBtn');
+    
+    if (input.files && input.files.length > 0) {
+        const fileName = input.files[0].name;
+        fileNameDisplay.textContent = fileName;
+        fileNameDisplay.classList.add('show');
+        filePlaceholder.classList.add('hide');
+        removeBtn.classList.add('show');
+    } else {
+        clearFileInput();
+    }
+}
+
+function clearFileInput() {
+    const fileInput = document.getElementById('excelFileInput');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const filePlaceholder = document.getElementById('filePlaceholder');
+    const removeBtn = document.getElementById('removeFileBtn');
+    
+    fileInput.value = '';
+    fileNameDisplay.textContent = '';
+    fileNameDisplay.classList.remove('show');
+    filePlaceholder.classList.remove('hide');
+    removeBtn.classList.remove('show');
+}
+
+// ============================================================
+// ADMIN SEARCH - Dynamic Search
+// ============================================================
+let adminSearchTimeout;
+
+function performAdminSearch() {
+    const searchText = document.getElementById('adminGlobalSearch').value.trim();
+    const clearBtn = document.getElementById('searchClearBtn');
+    
+    if (searchText.length === 0) {
+        clearBtn.classList.remove('visible');
+        resetAllTables();
+        return;
+    }
+    
+    clearBtn.classList.add('visible');
+    filterVerificationTable(searchText);
+}
+
+function filterVerificationTable(searchText) {
+    const rows = document.querySelectorAll('#studentTableBody tr');
+    const searchLower = searchText.toLowerCase().trim();
+    let found = false;
+    
+    rows.forEach(row => {
+        if (row.cells.length > 1) {
+            const rollNumber = row.getAttribute('data-roll')?.toLowerCase() || '';
+            const studentName = row.getAttribute('data-name')?.toLowerCase() || '';
+            const mobile = row.getAttribute('data-mobile')?.toLowerCase() || '';
+            const email = row.getAttribute('data-email')?.toLowerCase() || '';
+            
+            const matches = rollNumber.includes(searchLower) || 
+                studentName.includes(searchLower) || 
+                mobile.includes(searchLower) || 
+                email.includes(searchLower);
+            
+            row.style.display = matches ? '' : 'none';
+            if (matches) found = true;
+        }
+    });
+    
+    showNoResultMessage('studentTableBody', found, searchText);
+}
+
+function showNoResultMessage(tableId, found, searchText) {
+    const tableBody = document.getElementById(tableId);
+    let noResultRow = document.getElementById('noResultRow_' + tableId);
+    
+    if (!found && searchText !== '') {
+        if (!noResultRow) {
+            const tr = document.createElement('tr');
+            tr.id = 'noResultRow_' + tableId;
+            const colCount = tableBody.querySelector('tr')?.cells?.length || 9;
+            tr.innerHTML = `<td colspan="${colCount}" class="text-center text-muted py-4">
+                <i class="bi bi-search fs-2 d-block"></i>
+                No records found matching "<strong>${searchText}</strong>"
+            </td>`;
+            tableBody.appendChild(tr);
+        } else {
+            noResultRow.style.display = '';
+            const colCount = tableBody.querySelector('tr')?.cells?.length || 9;
+            noResultRow.innerHTML = `<td colspan="${colCount}" class="text-center text-muted py-4">
+                <i class="bi bi-search fs-2 d-block"></i>
+                No records found matching "<strong>${searchText}</strong>"
+            </td>`;
+        }
+    } else if (noResultRow) {
+        noResultRow.style.display = 'none';
+    }
+}
+
+function resetAllTables() {
+    document.querySelectorAll('#studentTableBody tr').forEach(row => {
+        row.style.display = '';
+    });
+    document.querySelectorAll('[id^="noResultRow_"]').forEach(el => el.style.display = 'none');
+}
+
+function clearAdminSearch() {
+    document.getElementById('adminGlobalSearch').value = '';
+    document.getElementById('searchClearBtn').classList.remove('visible');
+    resetAllTables();
+}
+
+// Search on Enter
+document.getElementById('adminGlobalSearch').addEventListener('keyup', function(e) {
+    if (e.key === 'Enter') {
+        performAdminSearch();
+    }
+});
+
+// Live search with debounce
+document.getElementById('adminGlobalSearch').addEventListener('input', function() {
+    clearTimeout(adminSearchTimeout);
+    adminSearchTimeout = setTimeout(() => {
+        const searchText = this.value.trim();
+        if (searchText.length > 0) {
+            performAdminSearch();
+        } else {
+            clearAdminSearch();
+        }
+    }, 300);
+});
+
+// Keyboard shortcut - Ctrl+K or Cmd+K
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('adminGlobalSearch').focus();
+    }
+});
+
+// ============================================================
+// TAB FUNCTIONALITY (Student Form Tabs)
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const tabId = this.dataset.tab;
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        const targetTab = document.getElementById('tab-' + tabId);
+        if (targetTab) targetTab.classList.add('active');
+    });
+});
+
+// ============================================================
+// DECLARATION TOGGLE
+// ============================================================
+document.querySelectorAll('input[name="declaration"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const isCorrection = this.value === 'correction';
+        toggleCorrectionForm(isCorrection);
+    });
+});
+
+// ============================================================
+// TOGGLE CORRECTION
+// ============================================================
+function toggleCorrection(fieldName) {
+    const checkbox = document.querySelector(`.correction-checkbox[data-field="${fieldName}"]`);
+    const input = document.getElementById(`correct_${fieldName}`);
+    if (checkbox && input) {
+        input.disabled = !checkbox.checked;
+        if (!checkbox.checked) {
+            input.value = '';
+        }
+    }
+}
+
+// ============================================================
+// TOGGLE CORRECTION FORM
+// ============================================================
+function toggleCorrectionForm(isCorrection) {
+    const correctionTab = document.getElementById('tab-correction');
+    const correctionTable = document.getElementById('correctionTable');
+    const correctionTabBtn = document.getElementById('correctionTabBtn');
+    
+    if (isCorrection) {
+        if (correctionTab) correctionTab.classList.remove('disabled');
+        if (correctionTable) correctionTable.classList.remove('disabled');
+        if (correctionTabBtn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            correctionTabBtn.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.getElementById('tab-correction').classList.add('active');
+        }
+    } else {
+        if (correctionTab) {
+            correctionTab.classList.add('disabled');
+            correctionTab.classList.remove('active');
+        }
+        if (correctionTable) correctionTable.classList.add('disabled');
+        
+        document.querySelectorAll('.correction-checkbox').forEach(cb => {
+            cb.checked = false;
+            const fieldName = cb.dataset.field;
+            const input = document.getElementById(`correct_${fieldName}`);
+            if (input) {
+                input.disabled = true;
+                input.value = '';
+            }
+        });
+        
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.tab-btn[data-tab="academic"]').classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        document.getElementById('tab-academic').classList.add('active');
+    }
+}
+
+// ============================================================
+// FILE UPLOAD LIST (for document upload in correction tab)
+// ============================================================
+document.getElementById('documentUpload')?.addEventListener('change', function() {
+    const fileList = document.getElementById('fileList');
+    const uploadStatus = document.getElementById('uploadStatus');
+    fileList.innerHTML = '';
+    
+    if (this.files.length > 0) {
+        const list = document.createElement('div');
+        list.className = 'd-flex flex-wrap gap-2 mt-2';
+        for (let i = 0; i < this.files.length; i++) {
+            const file = this.files[i];
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-primary p-2';
+            badge.innerHTML = `<i class="bi bi-file-earmark"></i> ${file.name} (${(file.size/1024).toFixed(1)} KB) 
+                <i class="bi bi-x-circle" style="cursor:pointer; margin-left:5px;" onclick="removeDocumentFile(${i})"></i>`;
+            list.appendChild(badge);
+        }
+        fileList.appendChild(list);
+        uploadStatus.innerHTML = `<i class="bi bi-check-circle text-success"></i> ${this.files.length} file(s) selected`;
+    } else {
+        uploadStatus.innerHTML = `<i class="bi bi-info-circle"></i> No files selected`;
+    }
+});
+
+function removeDocumentFile(index) {
+    const input = document.getElementById('documentUpload');
+    const dt = new DataTransfer();
+    for (let i = 0; i < input.files.length; i++) {
+        if (i !== index) dt.items.add(input.files[i]);
+    }
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+}
+
+// ============================================================
+// EXCEL FILE UPLOAD HANDLER
+// ============================================================
+document.getElementById('excelUploadForm')?.addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('excelFileInput');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('⚠️ Please select an Excel file to upload.');
+        return false;
+    }
+    
+    const fileName = fileInput.files[0].name;
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        e.preventDefault();
+        alert('⚠️ Please upload a valid Excel file (.xlsx or .xls).');
+        return false;
+    }
+    
+    const submitBtn = document.getElementById('uploadExcelBtn');
+    submitBtn.innerHTML = '<i class="bi bi-spinner bi-spin"></i> Uploading...';
+    submitBtn.disabled = true;
+});
+
+// ============================================================
+// FORM VALIDATION
+// ============================================================
+document.getElementById('verificationForm')?.addEventListener('submit', function(e) {
+    const agreeCheck = document.getElementById('agreeCheck');
+    if (!agreeCheck.checked) {
+        e.preventDefault();
+        alert('⚠️ Please agree to the Terms & Conditions before submitting.');
+        return false;
+    }
+
+    const declaration = document.querySelector('input[name="declaration"]:checked');
+    if (!declaration) {
+        e.preventDefault();
+        alert('⚠️ Please select a declaration option.');
+        return false;
+    }
+
+    if (declaration.value === 'correction') {
+        const checkboxes = document.querySelectorAll('.correction-checkbox:checked');
+        let hasCorrection = false;
+        checkboxes.forEach(cb => {
+            const fieldName = cb.dataset.field;
+            const input = document.getElementById(`correct_${fieldName}`);
+            if (input && input.value.trim()) {
+                hasCorrection = true;
+            }
+        });
+        
+        if (!hasCorrection) {
+            e.preventDefault();
+            alert('⚠️ Please select at least one field and enter correct details for correction.');
+            return false;
+        }
+
+        const nameFields = ['student_name', 'father_name', 'mother_name'];
+        let needsDocument = false;
+        checkboxes.forEach(cb => {
+            const fieldName = cb.dataset.field;
+            if (nameFields.includes(fieldName)) {
+                needsDocument = true;
+            }
+        });
+        
+        if (needsDocument) {
+            const fileInput = document.getElementById('documentUpload');
+            if (!fileInput || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('⚠️ Please upload supporting documents for Name/Father/Mother corrections.');
+                return false;
+            }
+        }
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.innerHTML = '<i class="bi bi-spinner bi-spin"></i> Submitting...';
+    submitBtn.disabled = true;
+});
+
+// ============================================================
+// EXPORT FUNCTIONS
+// ============================================================
+function exportFormData() {
+    window.location.href = '/export/form-data';
+}
+
+function exportTickets() {
+    window.location.href = '/export/tickets';
+}
+
+function exportNotifications() {
+    window.location.href = '/export/notifications';
+}
+
+// ============================================================
+// REFRESH FUNCTIONS
+// ============================================================
+function refreshVerificationData() {
+    location.reload();
+}
+
+// ============================================================
+// INIT - Set default state
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    const correctionRadio = document.getElementById('declarationNo');
+    if (correctionRadio && correctionRadio.checked) {
+        toggleCorrectionForm(true);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-ticket"></i> Ticket Details</h2>
+    <a href="{{ url_for('admin_verification_tickets') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card-box">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Ticket Number:</strong> {{ ticket.ticket_number }}</p>
+                    <p><strong>Roll Number:</strong> {{ ticket.roll_number }}</p>
+                    <p><strong>Student Name:</strong> {{ ticket.student_name }}</p>
+                    <p><strong>Declaration:</strong> {{ ticket.declaration or '-' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> 
+                        <span class="badge {% if ticket.status == 'Pending' %}bg-warning{% elif ticket.status == 'Approved' %}bg-success{% elif ticket.status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ ticket.status }}
+                        </span>
+                    </p>
+                    <p><strong>Submitted At:</strong> {{ ticket.submitted_at }}</p>
+                    {% if ticket.reviewed_at %}
+                        <p><strong>Reviewed At:</strong> {{ ticket.reviewed_at }}</p>
+                    {% endif %}
+                    {% if ticket.review_notes %}
+                        <p><strong>Review Notes:</strong> {{ ticket.review_notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-box">
+            <h5><i class="bi bi-gear"></i> Actions</h5>
+            <form method="POST" action="{{ url_for('admin_review_ticket', ticket_id=ticket.id) }}">
+                <div class="mb-3">
+                    <label class="form-label">Action</label>
+                    <select name="action" class="form-select" required>
+                        <option value="">Select Action</option>
+                        <option value="approve">Approve</option>
+                        <option value="reject">Reject</option>
+                        <option value="close">Close</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Enter review notes"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-check-circle"></i> Submit Review
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Corrections -->
+{% if corrections %}
+<div class="card-box">
+    <h5><i class="bi bi-pencil-square"></i> Corrections Requested</h5>
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Field Name</th>
+                    <th>Existing Detail</th>
+                    <th>Correct Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for correction in corrections %}
+                    <tr>
+                        <td><strong>{{ correction.field_name }}</strong></td>
+                        <td>{{ correction.existing_detail or '-' }}</td>
+                        <td>{{ correction.correct_detail }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Documents -->
+{% if documents %}
+<div class="card-box">
+    <h5><i class="bi bi-paperclip"></i> Documents</h5>
+    <ul class="list-group">
+        {% for doc in documents %}
+            <li class="list-group-item">
+                <i class="bi bi-file-earmark"></i> {{ doc.split('/')[-1] }}
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

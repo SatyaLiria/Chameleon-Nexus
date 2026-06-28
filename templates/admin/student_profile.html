@@ -1,0 +1,128 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="display-6 fw-bold" style="color: #1a237e;">
+            <i class="bi bi-person"></i> Student Profile
+        </h1>
+        <p class="text-muted">View and verify student details</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Student Info -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-2 text-center">
+                {% if student.photo_url %}
+                    <img src="{{ student.photo_url }}" alt="Student Photo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #1a237e;">
+                {% else %}
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 120px; height: 120px; border: 3px solid #1a237e;">
+                        <i class="bi bi-person-circle" style="font-size: 60px; color: #6c757d;"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h2 class="fw-bold">{{ student.student_name }}</h2>
+                        <p class="text-muted">
+                            <i class="bi bi-mortarboard"></i> {{ student.program or 'N/A' }} - {{ student.major or 'N/A' }}
+                        </p>
+                        <p><i class="bi bi-envelope"></i> {{ student.lms_email or 'N/A' }}</p>
+                        <p><i class="bi bi-phone"></i> {{ student.mobile_no or 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <p><strong>Roll Number:</strong> {{ student.roll_number }}</p>
+                        <p><strong>ABC ID:</strong> {{ student.abc_id or 'N/A' }}</p>
+                        <p><strong>DEB ID:</strong> {{ student.deb_id or 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body">
+                <h5 class="fw-bold"><i class="bi bi-ticket"></i> Verification Status</h5>
+                {% if ticket_status %}
+                    <span class="badge {% if ticket_status == 'Pending' %}bg-warning{% elif ticket_status == 'Approved' %}bg-success{% elif ticket_status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 16px; padding: 8px 16px;">
+                        <i class="bi bi-clock"></i> {{ ticket_status }}
+                    </span>
+                    {% if ticket_number %}
+                        <span class="badge bg-info" style="font-size: 14px; padding: 8px 16px;">
+                            <i class="bi bi-ticket"></i> Ticket: {{ ticket_number }}
+                        </span>
+                    {% endif %}
+                {% else %}
+                    <span class="badge bg-secondary" style="font-size: 16px; padding: 8px 16px;">
+                        <i class="bi bi-clock"></i> Not Verified
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Details -->
+<div class="row g-4">
+    <!-- Academic Details -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="fw-bold"><i class="bi bi-mortarboard"></i> Academic Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Program</strong></p>
+                        <p><strong>Major</strong></p>
+                        <p><strong>Roll Number</strong></p>
+                    </div>
+                    <div class="col-6">
+                        <p>{{ student.program or 'N/A' }}</p>
+                        <p>{{ student.major or 'N/A' }}</p>
+                        <p>{{ student.roll_number }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Personal Details -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="fw-bold"><i class="bi bi-person"></i> Personal Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Full Name</strong></p>
+                        <p><strong>Mobile Number</strong></p>
+                        <p><strong>LMS Email</strong></p>
+                    </div>
+                    <div class="col-6">
+                        <p>{{ student.student_name }}</p>
+                        <p>{{ student.mobile_no or 'N/A' }}</p>
+                        <p>{{ student.lms_email or 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Back Button -->
+<div class="mt-4">
+    <a href="{{ url_for('student_verification') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+{% endblock %}

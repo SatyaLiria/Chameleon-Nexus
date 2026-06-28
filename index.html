@@ -1,0 +1,107 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="text-center mb-4">
+            <i class="bi bi-gem text-primary"></i> Chameleon Nexus
+            <small class="d-block text-muted">Student 360° Intelligence Portal</small>
+        </h1>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Excel Upload -->
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-file-earmark-excel"></i> Upload Student Data
+            </div>
+            <div class="card-body">
+                <form action="/upload-excel" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="excelFile" class="form-label">Choose Excel File</label>
+                        <input type="file" class="form-control" id="excelFile" name="excel_file" accept=".xlsx,.xls">
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-upload"></i> Upload & Process
+                    </button>
+                </form>
+                <small class="text-muted mt-2 d-block">
+                    <i class="bi bi-info-circle"></i> Upload Student_Details_Verification.xlsx
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Upload -->
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-image"></i> Upload Student Photo
+            </div>
+            <div class="card-body">
+                <form id="photoUploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="photoFile" class="form-label">Choose Photo</label>
+                        <input type="file" class="form-control" id="photoFile" name="photo" accept="image/*">
+                    </div>
+                    <div class="mb-3">
+                        <label for="rollNumber" class="form-label">Roll Number</label>
+                        <input type="text" class="form-control" id="rollNumber" placeholder="Enter roll number">
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="uploadPhoto()">
+                        <i class="bi bi-cloud-upload"></i> Upload Photo
+                    </button>
+                </form>
+                <div id="uploadStatus" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function uploadPhoto() {
+    const fileInput = document.getElementById('photoFile');
+    const rollNumber = document.getElementById('rollNumber').value;
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    if (!fileInput.files[0]) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">Please select a photo.</div>';
+        return;
+    }
+    
+    if (!rollNumber) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">Please enter roll number.</div>';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('photo', fileInput.files[0]);
+    formData.append('roll_number', rollNumber);
+    
+    statusDiv.innerHTML = '<div class="alert alert-info">Uploading...</div>';
+    
+    fetch('/upload-photo', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = `<div class="alert alert-success">
+                Photo uploaded successfully! 
+                <br><img src="${data.url}" style="max-width:200px; border-radius:10px; margin-top:10px;">
+            </div>`;
+            document.getElementById('photoFile').value = '';
+            document.getElementById('rollNumber').value = '';
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+    });
+}
+</script>
+{% endblock %}

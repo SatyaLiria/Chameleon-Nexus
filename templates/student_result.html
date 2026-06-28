@@ -1,0 +1,237 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="display-6 fw-bold" style="color: #1a237e;">
+            <i class="bi bi-mortarboard"></i> Student Results
+        </h1>
+        <p class="text-muted">Academic performance and grades</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Student Info -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-2 text-center">
+                {% if student.photo_url %}
+                    <img src="{{ student.photo_url }}" alt="Student Photo" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #1a237e;">
+                {% else %}
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 100px; height: 100px; border: 3px solid #1a237e;">
+                        <i class="bi bi-person-circle" style="font-size: 50px; color: #6c757d;"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h3 class="fw-bold">{{ student.student_name }}</h3>
+                        <p class="text-muted">
+                            <i class="bi bi-mortarboard"></i> {{ student.program or 'N/A' }} - {{ student.major or 'N/A' }}
+                        </p>
+                        <p><i class="bi bi-envelope"></i> {{ student.lms_email or 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <p><strong>Roll Number:</strong> {{ student.roll_number }}</p>
+                        <p><strong>ABC ID:</strong> {{ student.abc_id or 'N/A' }}</p>
+                        <p><strong>DEB ID:</strong> {{ student.deb_id or 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Semester Summary -->
+<div class="row g-4 mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="fw-bold"><i class="bi bi-bar-chart"></i> Semester Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Semester</th>
+                                <th>Subjects</th>
+                                <th>Credits</th>
+                                <th>CGPA</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if semester_results %}
+                                {% for sem in semester_results %}
+                                    <tr>
+                                        <td><strong>Semester {{ sem.semester }}</strong></td>
+                                        <td>{{ sem.subjects }}</td>
+                                        <td>{{ sem.credits }}</td>
+                                        <td>
+                                            <span class="badge {% if sem.cgpa >= 8 %}bg-success{% elif sem.cgpa >= 6 %}bg-warning{% else %}bg-danger{% endif %}" style="font-size: 14px; padding: 6px 12px;">
+                                                {{ sem.cgpa }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="toggleSemester({{ sem.semester }})">
+                                                <i class="bi bi-eye"></i> View Subjects
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">
+                                        <i class="bi bi-info-circle"></i> No semester data available.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Semester Subjects (Collapsible) -->
+{% for sem, subjects in semester_subjects.items() %}
+    <div class="row g-4 mb-4" id="semester-{{ sem }}" style="display: none;">
+        <div class="col-md-12">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="fw-bold"><i class="bi bi-book"></i> Semester {{ sem }} - Subjects</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Subject Name</th>
+                                    <th>Subject Code</th>
+                                    <th>Marks</th>
+                                    <th>Grade</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subject in subjects %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ subject.subject_name or 'N/A' }}</td>
+                                        <td>{{ subject.subject_code or 'N/A' }}</td>
+                                        <td>{{ subject.marks or '-' }}</td>
+                                        <td>{{ subject.grade or '-' }}</td>
+                                        <td>
+                                            {% if subject.is_supplementary %}
+                                                <span class="badge bg-danger">Supplementary</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Passed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+<!-- Supplementary List -->
+{% if supplementary_list %}
+    <div class="row g-4 mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle"></i> Supplementary Subjects</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-danger">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Subject Name</th>
+                                    <th>Subject Code</th>
+                                    <th>Semester</th>
+                                    <th>Marks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subject in supplementary_list %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ subject.subject_name or 'N/A' }}</td>
+                                        <td>{{ subject.subject_code or 'N/A' }}</td>
+                                        <td>Semester {{ subject.semester }}</td>
+                                        <td>{{ subject.marks or '-' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Back Button -->
+<div class="mt-3">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+    <a href="{{ url_for('student_form') }}?student_id={{ student.id }}" class="btn btn-primary">
+        <i class="bi bi-person-badge"></i> View Full Profile
+    </a>
+</div>
+
+<script>
+    function toggleSemester(semester) {
+        const element = document.getElementById(`semester-${semester}`);
+        if (element.style.display === 'none') {
+            element.style.display = 'block';
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+<style>
+    .card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .card-header {
+        border-radius: 12px 12px 0 0 !important;
+        background: transparent;
+    }
+    .table th {
+        white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 15px;
+        }
+        .table {
+            font-size: 13px;
+        }
+        .table th, .table td {
+            padding: 8px 6px;
+        }
+        .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+    }
+</style>
+{% endblock %}

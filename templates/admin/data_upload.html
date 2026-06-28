@@ -1,0 +1,130 @@
+{% extends "admin/layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="display-6 fw-bold" style="color: #1a237e;">
+            <i class="bi bi-cloud-upload"></i> Data Upload
+        </h1>
+        <p class="text-muted">Upload database files to Supabase and photos to Cloudinary</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <!-- Database Upload -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="fw-bold"><i class="bi bi-database"></i> Upload Database</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_database') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="dbFile" class="form-label">Choose Database File</label>
+                        <input type="file" class="form-control" id="dbFile" name="db_file" 
+                               accept=".csv,.xlsx,.xls,.json" required>
+                        <small class="text-muted">Supported: CSV, Excel (.xlsx, .xls), JSON</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tableName" class="form-label">Target Table</label>
+                        <input type="text" class="form-control" id="tableName" name="table_name" 
+                               placeholder="e.g., students" value="students">
+                        <small class="text-muted">Table will be auto-created if not exists</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="primaryKey" class="form-label">Primary Key Column</label>
+                        <input type="text" class="form-control" id="primaryKey" name="primary_key" 
+                               placeholder="e.g., id" value="id">
+                        <small class="text-muted">Used for upsert operations</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-cloud-upload"></i> Upload to Supabase
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Upload -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="fw-bold"><i class="bi bi-image"></i> Upload Photos</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_photos') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="photos" class="form-label">Choose Photos</label>
+                        <input type="file" class="form-control" id="photos" name="photos" 
+                               accept=".png,.jpg,.jpeg,.gif,.webp" multiple required>
+                        <small class="text-muted">Multiple files allowed. Supported: PNG, JPG, JPEG, GIF, WEBP</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="uploadType" class="form-label">Upload Type</label>
+                        <select class="form-select" id="uploadType" name="upload_type">
+                            <option value="student">Student Photo (roll_number as filename)</option>
+                            <option value="general">General (filename as public_id)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="folder" class="form-label">Cloudinary Folder</label>
+                        <input type="text" class="form-control" id="folder" name="folder" 
+                               placeholder="e.g., chameleon_nexus/photos" value="chameleon_nexus/photos">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-cloud-upload"></i> Upload to Cloudinary
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="fw-bold"><i class="bi bi-info-circle"></i> Instructions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-database text-primary"></i> Database Upload</h6>
+                        <ul class="text-muted">
+                            <li><strong>CSV/Excel:</strong> Upload data to table</li>
+                            <li><strong>JSON:</strong> Array of objects to upload</li>
+                            <li><strong>Auto-Sync:</strong> New columns are auto-created</li>
+                            <li><strong>Schema:</strong> Table is auto-created if missing</li>
+                            <li><strong>Auto-Detect:</strong> Column types detected automatically</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-image text-success"></i> Photo Upload</h6>
+                        <ul class="text-muted">
+                            <li><strong>Student:</strong> Filename = Roll Number</li>
+                            <li><strong>General:</strong> Filename = Public ID</li>
+                            <li>Multiple files can be uploaded at once</li>
+                            <li>Auto-optimized for web</li>
+                            <li>Auto-links to student records</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

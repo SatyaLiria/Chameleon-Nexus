@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold" style="color: #1a237e;">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </h1>
+        <p class="text-muted">Welcome back, {{ user.full_name or user.username }}!</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">Total Students</h6>
+                        <h2 class="fw-bold mb-0">{{ total_students }}</h2>
+                    </div>
+                    <i class="bi bi-mortarboard" style="font-size: 40px; opacity: 0.6;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">Total Users</h6>
+                        <h2 class="fw-bold mb-0">{{ total_users }}</h2>
+                    </div>
+                    <i class="bi bi-people" style="font-size: 40px; opacity: 0.6;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">Total Roles</h6>
+                        <h2 class="fw-bold mb-0">{{ total_roles }}</h2>
+                    </div>
+                    <i class="bi bi-shield" style="font-size: 40px; opacity: 0.6;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">Notifications</h6>
+                        <h2 class="fw-bold mb-0">{{ notification_count }}</h2>
+                    </div>
+                    <i class="bi bi-bell" style="font-size: 40px; opacity: 0.6;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="fw-bold mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/admin/users" class="btn btn-primary">
+                <i class="bi bi-people"></i> Manage Users
+            </a>
+            <a href="/admin/roles" class="btn btn-success">
+                <i class="bi bi-shield"></i> Manage Roles
+            </a>
+            <a href="/admin/column-permissions" class="btn btn-info text-white">
+                <i class="bi bi-layout-three-columns"></i> Column Permissions
+            </a>
+            <a href="/admin/assign-students" class="btn btn-warning">
+                <i class="bi bi-person-plus"></i> Assign Students
+            </a>
+            <a href="/admin/my-students" class="btn btn-secondary">
+                <i class="bi bi-mortarboard"></i> My Students
+            </a>
+            <a href="/admin/student-verification" class="btn btn-primary">
+                <i class="bi bi-person-check"></i> Verification
+            </a>
+            <a href="/student-form" class="btn btn-dark">
+                <i class="bi bi-person-badge"></i> Student Form
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
